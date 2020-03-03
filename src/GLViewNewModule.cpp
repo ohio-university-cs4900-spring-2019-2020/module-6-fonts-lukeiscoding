@@ -39,6 +39,10 @@
 #include "NetMsgSimpleWO.h"
 //PhysX
 #include "PhysXModule.h"
+//fonts
+#include "WOGUILabel.h"
+#include "WOFTGLString.h"
+#include "MGLFTGLString.h"
 
 
 using namespace Aftr;
@@ -142,10 +146,18 @@ void GLViewNewModule::updateWorld()
 		WO* awo = static_cast<WO*>(a->userData);
 		awo->getModel()->setDisplayMatrix(dma);
 		awo->setPosition(dma[12], dma[13], dma[14]);
+
+		Vector pos = awo->getPosition();
+		pos.y = pos.y + 5;
+		int id = actorLst->getIndexOfWO(awo) + 1;
+		WOFTGLString* wostring = (WOFTGLString*)actorLst->at(id);
+		wostring->getModel()->setDisplayMatrix(dma);
+		wostring->setPosition(pos);
+
 		NetMsgSimpleWO msg;
 		msg.pos = awo->getPosition();
 		msg.dma = dma;
-		msg.id = actorLst->getIndexOfWO(awo);
+		msg.id = actorLst->getIndexOfWO(awo) / 2;
 		msg.new_indicator = 0;
 		client->sendNetMsgSynchronousTCP(msg);
 	}
@@ -208,6 +220,8 @@ void GLViewNewModule::onKeyDown(const SDL_KeyboardEvent& key)
 		}
 	}
 
+
+
 	//// press '1' to take off the jet 1
 	//if (key.keysym.sym == SDLK_1)
 	//{
@@ -251,7 +265,7 @@ void GLViewNewModule::onKeyDown(const SDL_KeyboardEvent& key)
 	//	client->sendNetMsgSynchronousTCP(msg);
 	//}
 	// press '3' to take off the jet 3
-	if (key.keysym.sym == SDLK_3)
+	if (key.keysym.sym == SDLK_3 )
 	{
 		std::string jet(ManagerEnvironmentConfiguration::getSMM() + "/models/jet_wheels_down_PP.wrl");
 		PxMaterial* gMaterial = PhysXModule::gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
@@ -271,9 +285,23 @@ void GLViewNewModule::onKeyDown(const SDL_KeyboardEvent& key)
 		actorLst->push_back(wo1);
 		NetMsgSimpleWO msg;
 		msg.pos = wo1->getPosition();
-		msg.id = actorLst->getIndexOfWO(wo1);
+		msg.id = actorLst->getIndexOfWO(wo1) / 2;
 		msg.new_indicator = 1;
 		client->sendNetMsgSynchronousTCP(msg);
+
+		string jet_name = "jet " + std::to_string(msg.id);
+		WOFTGLString* wostring = WOFTGLString::New(ManagerEnvironmentConfiguration::getSMM() + "/fonts/COMIC.TTF", 30);
+		wostring->getModelT<MGLFTGLString>()->setFontColor(aftrColor4f(1.0f, 1.0f, 1.0f, 1.0f));
+		wostring->getModelT<MGLFTGLString>()->setSize(5, 5);
+		wostring->getModelT<MGLFTGLString>()->setText(jet_name);
+		wostring->rotateAboutGlobalX(PI / 2);
+		wostring->rotateAboutGlobalZ(-PI / 2);
+		Vector pos = wo1->getPosition();
+		pos.y = pos.y + 5;
+		wostring->setPosition(pos);
+		wostring->setLabel("String");
+		worldLst->push_back(wostring);
+		actorLst->push_back(wostring);
 	}
 
 	// press 'e' to change sound effct
@@ -389,6 +417,26 @@ void Aftr::GLViewNewModule::loadMap()
 	PxMaterial* gMaterial = PhysXModule::gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
 	PxRigidStatic* groundPlane = PxCreatePlane(*PhysXModule::gPhysics, PxPlane(0, 0, 1, 0), *gMaterial);
 	PhysXModule::addActor(wo0, groundPlane);
+
+
+	cout << "Enter pilot name here.." << endl;
+	char name[20];
+	string name_string = "";
+	while (name_string == "") {
+		cin.getline(name, 20, '\n');
+		name_string = name;
+		//getline(cin, input);
+	}
+
+	WOGUILabel* label = WOGUILabel::New(nullptr);
+	label->setText("Pilot: "+name_string);
+	label->setColor(255, 0, 0, 255);
+	label->setFontSize(30); //font size is correlated with world size
+	label->setPosition(Vector(0, 1, 0));
+	label->setFontOrientation(FONT_ORIENTATION::foLEFT_TOP);
+	label->setFontPath(ManagerEnvironmentConfiguration::getSMM() + "/fonts/TIMES.TTF");
+	worldLst->push_back(label);
+
 
 	////Create the infinite grass plane that uses the Open Dynamics Engine (ODE)
 	//wo = WOStatic::New( grass, Vector(1,1,1), MESH_SHADING_TYPE::mstFLAT );
